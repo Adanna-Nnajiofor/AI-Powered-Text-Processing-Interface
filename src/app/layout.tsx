@@ -24,6 +24,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Add all three trial tokens */}
+        <meta
+          httpEquiv="origin-trial"
+          content={process.env.NEXT_PUBLIC_ORIGIN_TRIAL_DETECT_LANGUAGE}
+        />
+        <meta
+          httpEquiv="origin-trial"
+          content={process.env.NEXT_PUBLIC_ORIGIN_TRIAL_SUMMARIZE}
+        />
+        <meta
+          httpEquiv="origin-trial"
+          content={process.env.NEXT_PUBLIC_ORIGIN_TRIAL_TRANSLATE}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
