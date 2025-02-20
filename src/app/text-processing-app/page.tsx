@@ -51,6 +51,7 @@ const TextProcessingApp = () => {
     try {
       const response = await fetch("/api/detect-language", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
       const data = await response.json();
@@ -68,6 +69,7 @@ const TextProcessingApp = () => {
       if (message.text.length <= 150 || message.language !== "English") return;
       const response = await fetch("/api/summarize", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: message.text }),
       });
       const data = await response.json();
@@ -85,6 +87,7 @@ const TextProcessingApp = () => {
       const message = messages[index];
       const response = await fetch("/api/translate", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: message.text, targetLang: selectedLang }),
       });
       const data = await response.json();
