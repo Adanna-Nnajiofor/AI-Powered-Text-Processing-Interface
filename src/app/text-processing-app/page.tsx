@@ -103,7 +103,7 @@ const TextProcessingApp = () => {
         return;
       }
 
-      // Ensure window.ai and summarizer exist
+      // Ensure Summarizer API is available
       if (!window.ai?.summarizer) {
         setError("Summarizer API is not available.");
         setLoading(false);
@@ -119,34 +119,27 @@ const TextProcessingApp = () => {
         return;
       }
 
-      type SummarizerOptions = {
-        sharedContext?: string;
-        type?: "summary" | "paraphrase" | "key-points";
-        format?: "plain-text" | "markdown";
-        length?: "short" | "medium" | "long";
-      };
-
-      const options: SummarizerOptions = {
+      // Define Summarizer Options
+      const options = {
         sharedContext: "General text summarization",
-        type: "summary",
+        type: "key-points",
         format: "plain-text",
         length: "medium",
-      };
+      } as const;
 
+      // Initialize Summarizer
       const summarizer = await summarizerAPI.create(options);
 
-      // Wait for model download if necessary
-      if (summarizer.ready) {
-        await summarizer.ready;
-      }
+      // Wait for model to be ready
+      await summarizer.ready;
 
-      // Collect output properly
+      // ✅ Corrected Summarization Call
       let result = "";
       for await (const chunk of summarizer.summarize(message.text)) {
         result += chunk;
       }
 
-      // Update the message with the summary
+      // Update message with summary
       setMessages((prevMessages) => {
         const updatedMessages = [...prevMessages];
         updatedMessages[index] = { ...message, summary: result };
