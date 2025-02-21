@@ -49,53 +49,193 @@ const TextProcessingApp = () => {
 
   const detectLanguage = async (text: string) => {
     try {
-      const response = await fetch("/api/detect-language", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-      const data = await response.json();
-      return data.language || "Unknown";
-    } catch {
-      console.error("Language detection error");
+      if (!window.ai?.languageDetector) {
+        console.warn("Language Detector API is not available.");
+        return "Unknown";
+      }
+
+      const languageDetectorCapabilities =
+        await window.ai.languageDetector.capabilities();
+      const canDetect = languageDetectorCapabilities.capabilities;
+
+      let detector;
+      if (canDetect === "no") {
+        console.error("Language detector is not usable.");
+        return "Unknown";
+      }
+
+      if (canDetect === "readily") {
+        detector = await window.ai.languageDetector.create();
+      } else {
+        detector = await window.ai.languageDetector.create({
+          monitor(m) {
+            // Ensure `m` has the correct type
+            if (m instanceof Event && "loaded" in m && "total" in m) {
+              m.target?.addEventListener("progress", (e) => {
+                const progressEvent = e as ProgressEvent;
+                console.log(
+                  `Downloaded ${progressEvent.loaded} of ${progressEvent.total} bytes.`
+                );
+              });
+            }
+          },
+        });
+        await detector.ready;
+      }
+
+      const results = await detector.detect(text);
+      return results.length > 0 ? results[0].detectedLanguage : "Unknown";
+    } catch (error) {
+      console.error("Language detection error:", error);
       return "Unknown";
     }
   };
 
   const summarizeText = async (index: number) => {
     setLoading(true);
+    setError("");
+
     try {
       const message = messages[index];
-      if (message.text.length <= 150 || message.language !== "English") return;
-      const response = await fetch("/api/summarize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: message.text }),
+
+      if (message.text.length <= 150 || message.language !== "en") {
+        setLoading(false);
+        return;
+      }
+
+      // Ensure window.ai and summarizer exist
+      if (!window.ai?.summarizer) {
+        setError("Summarizer API is not available.");
+        setLoading(false);
+        return;
+      }
+
+      const summarizerAPI = window.ai.summarizer;
+      const { available } = await summarizerAPI.capabilities();
+
+      if (available === "no") {
+        setError("Summarizer API is not usable.");
+        setLoading(false);
+        return;
+      }
+
+      type SummarizerOptions = {
+        sharedContext?: string;
+        type?: "summary" | "paraphrase" | "key-points";
+        format?: "plain-text" | "markdown";
+        length?: "short" | "medium" | "long";
+      };
+
+      const options: SummarizerOptions = {
+        sharedContext: "General text summarization",
+        type: "summary",
+        format: "plain-text",
+        length: "medium",
+      };
+
+      const summarizer = await summarizerAPI.create(options);
+
+      // Wait for model download if necessary
+      if (summarizer.ready) {
+        await summarizer.ready;
+      }
+
+      // Collect output properly
+      let result = "";
+      for await (const chunk of summarizer.summarize(message.text)) {
+        result += chunk;
+      }
+
+      // Update the message with the summary
+      setMessages((prevMessages) => {
+        const updatedMessages = [...prevMessages];
+        updatedMessages[index] = { ...message, summary: result };
+        return updatedMessages;
       });
-      const data = await response.json();
-      message.summary = data.summary;
-      setMessages([...messages]);
-    } catch {
+    } catch (error) {
+      console.error("Summarization error:", error);
       setError("Failed to summarize text.");
     }
+
     setLoading(false);
   };
 
   const translateText = async (index: number) => {
     setLoading(true);
+    setError("");
+
     try {
       const message = messages[index];
-      const response = await fetch("/api/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: message.text, targetLang: selectedLang }),
+
+      // Check if AI Translator API is available
+      const aiTranslator = self.ai?.translator;
+      if (!aiTranslator) {
+        setError("Translator API is not available.");
+        setLoading(false);
+        return;
+      }
+
+      // Check if language pair is available
+      const translatorCapabilities = await aiTranslator.capabilities();
+      const available = translatorCapabilities.languagePairAvailable(
+        "en",
+        selectedLang
+      );
+
+      if (available === "no") {
+        setError("Translation is not available for the selected language.");
+        setLoading(false);
+        return;
+      }
+
+      // Create the translator
+      const translator = await aiTranslator.create({
+        sourceLanguage: "en",
+        targetLanguage: selectedLang,
       });
-      const data = await response.json();
-      message.translation = data.translation;
-      setMessages([...messages]);
-    } catch {
+
+      if (!translator || typeof translator.translate !== "function") {
+        setError("Translator initialization failed or method missing.");
+        setLoading(false);
+        return;
+      }
+
+      if (!translator) {
+        setError("Translator initialization failed.");
+        setLoading(false);
+        return;
+      }
+
+      if (typeof translator.translate !== "function") {
+        setError("Translation function is missing.");
+        setLoading(false);
+        return;
+      }
+
+      // 🔥 Fix: Accumulate async iterable output into a string
+      let result = "";
+      const translationOutput = await translator.translate(message.text);
+
+      // If translationOutput is a string, no need to iterate
+      if (typeof translationOutput === "string") {
+        result = translationOutput;
+      } else {
+        for await (const chunk of translationOutput) {
+          result += chunk;
+        }
+      }
+
+      // Update the messages array
+      setMessages((prevMessages) => {
+        const updatedMessages = [...prevMessages];
+        updatedMessages[index] = { ...message, translation: result };
+        return updatedMessages;
+      });
+    } catch (error) {
+      console.error("Translation error:", error);
       setError("Failed to translate text.");
     }
+
     setLoading(false);
   };
 
@@ -118,7 +258,7 @@ const TextProcessingApp = () => {
           >
             <p className="text-gray-800">{msg.text}</p>
             <p className="text-sm text-gray-500">Language: {msg.language}</p>
-            {msg.text.length > 150 && msg.language === "English" && (
+            {msg.text.length > 150 && msg.language === "en" && (
               <button
                 type="button"
                 className="text-blue-500 mt-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
