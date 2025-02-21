@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Text is required" }, { status: 400 });
     }
 
-    // ✅ Step 1: Check if AI API and Language Detector are available
+    // Step 1: Check if AI API and Language Detector are available
     const globalAI = globalThis as unknown as {
       ai?: { languageDetector?: LanguageDetectorAPI };
     };
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
     const languageDetectorAPI = globalAI.ai.languageDetector;
 
-    // ✅ Step 2: Check the language detector capabilities
+    //  Step 2: Check the language detector capabilities
     const capabilities = await languageDetectorAPI.capabilities();
     console.log("Language Detector Capabilities:", capabilities);
 
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // ✅ Step 3: Initialize the detector
+    //  Step 3: Initialize the detector
     let detector: LanguageDetector;
     if (capabilities.capabilities === "readily") {
       detector = await languageDetectorAPI.create();
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
       await detector.ready;
     }
 
-    // ✅ Step 4: Run Language Detection
+    //  Step 4: Run Language Detection
     const results: LanguageDetectionResult[] = await detector.detect(text);
     console.log("Detection Results:", results);
 
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // ✅ Step 5: Get the most confident detected language
+    //  Step 5: Get the most confident detected language
     const { detectedLanguage, confidence } = results[0];
     console.log(
       `Detected Language: ${detectedLanguage} (Confidence: ${confidence})`
