@@ -1,6 +1,7 @@
 "use client";
-import { useState, useRef } from "react";
-import { FaPaperPlane } from "react-icons/fa";
+import { useState, useRef, useEffect } from "react";
+import { FaPaperPlane, FaMoon, FaSun } from "react-icons/fa";
+import { motion } from "framer-motion";
 
 interface Message {
   text: string;
@@ -16,6 +17,14 @@ const TextProcessingApp = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const lastMessageRef = useRef<HTMLDivElement | null>(null);
+
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    if (lastMessageRef.current) {
+      lastMessageRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   const handleSend = async () => {
     if (!text.trim()) return;
@@ -233,34 +242,67 @@ const TextProcessingApp = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen max-w-2xl mx-auto p-4 bg-gray-100">
+    <div
+      className={`flex flex-col h-screen max-w-2xl mx-auto p-4 ${
+        darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-black"
+      }`}
+    >
+      {/* Header */}
+      <header className="text-center mb-4">
+        <h1 className="text-2xl font-bold">Multilingual Chat Application</h1>
+        <p className="text-gray-600 dark:text-gray-300 mt-2">
+          A real-time chat interface with language translation, summarization
+          and translation with dark mode.
+        </p>
+      </header>
+
+      {/* Dark Mode Toggle */}
+      <button
+        type="button"
+        className="self-end p-2 mb-2 bg-gray-300 dark:bg-gray-700 rounded-full"
+        onClick={() => setDarkMode(!darkMode)}
+      >
+        {darkMode ? (
+          <FaSun className="text-yellow-500" />
+        ) : (
+          <FaMoon className="text-gray-800" />
+        )}
+      </button>
+
       {/* Error Message */}
       {error && <p className="text-red-500 text-center">{error}</p>}
 
       {/* Output Area */}
       <div
-        className="flex-grow overflow-y-auto border p-4 bg-white rounded-md"
+        className="flex-grow overflow-y-auto border p-4 bg-white dark:bg-gray-800 rounded-md"
         aria-live="polite"
       >
         {messages.map((msg, index) => (
-          <div
+          <motion.div
             key={index}
-            className="mb-4 p-2 bg-gray-200 rounded-md"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mb-4 p-2 bg-gray-200 dark:bg-gray-700 rounded-md"
             tabIndex={-1}
             ref={index === messages.length - 1 ? lastMessageRef : null}
           >
-            <p className="text-gray-800">{msg.text}</p>
-            <p className="text-sm text-gray-500">Language: {msg.language}</p>
+            <p className="text-gray-700 dark:text-gray-200 hover:text-gray-900">
+              {msg.text}
+            </p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-white bg-gray-600 dark:bg-gray-500 px-2 py-1 rounded-md inline-block mt-2 mr-4">
+              Language: {msg.language}
+            </p>
             {msg.text.length > 150 && msg.language === "en" && (
               <button
                 type="button"
-                className="text-blue-500 mt-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-2 px-3 py-1 text-white font-semibold bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 rounded-md transition duration-300 ease-in-out shadow-md "
                 onClick={() => summarizeText(index)}
               >
-                Summarize
+                🔍 Summarize
               </button>
             )}
-            <div className="mt-2">
+            <div className="mt-2 gap-2">
               <select
                 aria-label="Select language"
                 value={selectedLang}
@@ -276,30 +318,30 @@ const TextProcessingApp = () => {
               </select>
               <button
                 type="button"
-                className="ml-2 text-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="ml-2 px-3 py-1 text-white font-semibold bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 rounded-md transition duration-300 ease-in-out shadow-md mr-4"
                 onClick={() => translateText(index)}
               >
-                Translate
+                🌍 Translate
               </button>
             </div>
             {msg.summary && (
-              <p className="text-sm mt-2 text-blue-600">
+              <p className="text-sm mt-4 text-blue-600">
                 Summary: {msg.summary}
               </p>
             )}
             {msg.translation && (
-              <p className="text-sm mt-2 text-green-600">
+              <p className="text-sm mt-4 text-green-600 hover:text-green-800">
                 Translation: {msg.translation}
               </p>
             )}
-          </div>
+          </motion.div>
         ))}
       </div>
 
       {/* Input Area */}
-      <div className="mt-4 flex items-center border p-2 bg-white rounded-md">
+      <div className="mt-4 flex items-center border p-2 bg-white dark:bg-gray-800 rounded-md">
         <textarea
-          className="flex-grow p-2 outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-grow p-2 outline-none focus:ring-2 focus:ring-blue-500 bg-transparent"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Type your text here..."

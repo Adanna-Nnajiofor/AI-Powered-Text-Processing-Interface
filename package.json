@@ -12,6 +12,7 @@
     "@google-cloud/translate": "^8.5.0",
     "axios": "^1.7.9",
     "dotenv": "^16.4.7",
+    "framer-motion": "^12.4.7",
     "franc": "^6.2.0",
     "franc-min": "^6.2.0",
     "langdetect": "^0.2.1",
